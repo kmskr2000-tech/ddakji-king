@@ -14,6 +14,7 @@ export const CFG = {
   inner: { base: 40, perStr: 2 },
   tilt: { factor: 1.15, max: 2 },
   crit: { base: 0.05, perLuck: 0.03 },
+  gate: { base: 0.70, perTilt: 0.15 }, // 뒤집기 필요 파워
 };
 
 export const Level = { FLIP: 'FLIP', INNER: 'INNER', MISS: 'MISS', WHIFF: 'WHIFF' };
@@ -99,6 +100,10 @@ export function radii(attackerStats, power, tiltStacks) {
   };
 }
 
+// 뒤집기(FLIP) 필요 파워: 0스택 70% / 1스택 55% / 2스택 40%
+export const requiredPower = (tiltStacks) =>
+  Math.round((CFG.gate.base - CFG.gate.perTilt * tiltStacks) * 1e6) / 1e6;
+
 const upgrade = (lv) => (lv === Level.MISS ? Level.INNER : lv === Level.INNER ? Level.FLIP : lv);
 
 // 판정 — 설계안 §4 의사코드 그대로.
@@ -108,10 +113,12 @@ export function judge(aimX, aimY, power, attacker, defender, rng = Math.random) 
   const dx = aimX - defender.x;
   const dy = aimY - defender.y;
   const dist = Math.hypot(dx, dy);
+  const tiltBefore = defender.tiltStacks;
   const { bull, inner } = radii(attacker.stats, power, defender.tiltStacks);
 
   let level;
   let crit = false;
+  let gated = false;
   if (dist <= CFG.ddakjiR) {
     if (dist <= bull) level = Level.FLIP;
     else if (dist <= inner) level = Level.INNER;
@@ -119,6 +126,12 @@ export function judge(aimX, aimY, power, attacker, defender, rng = Math.random) 
     if (level !== Level.FLIP && rng() < CFG.crit.base + CFG.crit.perLuck * attacker.stats.luck) {
       level = upgrade(level);
       crit = true;
+    }
+    // 파워 게이트: FLIP(불스아이·크리티컬 승격 포함)은 필요 파워 미달 시 INNER로 강등, crit=false
+    if (level === Level.FLIP && power < requiredPower(defender.tiltStacks)) {
+      level = Level.INNER;
+      crit = false;
+      gated = true;
     }
   } else {
     level = Level.WHIFF;
@@ -135,5 +148,5 @@ export function judge(aimX, aimY, power, attacker, defender, rng = Math.random) 
   }
   if (level === Level.FLIP) defender.tiltStacks = 0;
 
-  return { level, dist, crit, bull, inner };
+  return { level, dist, crit, gated, bull, inner, required: requiredPower(tiltBefore) };
 }

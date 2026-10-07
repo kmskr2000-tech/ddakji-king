@@ -1,5 +1,5 @@
 // 코어 프로토타입 렌더: 허수아비 딱지 1개를 계속 타격. (상태머신·화면은 작업 #2)
-import { CFG, Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii } from './aim.js?v=1791364438';
+import { CFG, Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1791365602';
 
 // 자가업데이트: version.json(no-store) vs window.__V. 다르면 ?v=새버전으로 교체 (같으면 무동작 = 루프 없음)
 if (window.__V) {
@@ -125,19 +125,25 @@ function draw() {
   ctx.textAlign = 'center';
   if (result) {
     ctx.font = 'bold 34px monospace'; ctx.fillStyle = COLORS[result.level];
-    ctx.fillText(LABEL[result.level] + (result.crit ? ' ★CRIT' : ''), W / 2, 200);
+    ctx.fillText((result.gated ? '파워 부족! 이너링' : LABEL[result.level]) + (result.crit ? ' ★CRIT' : ''), W / 2, 200);
     ctx.font = '14px monospace'; ctx.fillStyle = '#ccc';
     ctx.fillText(`dist ${result.dist.toFixed(1)}  bull ${result.bull.toFixed(1)}  inner ${result.inner.toFixed(1)}  power ${(result.power * 100) | 0}%`, W / 2, 224);
   }
 
   // 차지 게이지
   const gx = 40, gy = 690, gw = W - 80, gh = 26;
+  const req = requiredPower(target.tiltStacks), flipOk = charge.power >= req;
   ctx.fillStyle = '#14121f'; ctx.fillRect(gx, gy, gw, gh);
-  if (phase === 'CHARGE') { ctx.fillStyle = charge.power >= 1 ? '#ffd447' : '#ff5d5d'; ctx.fillRect(gx, gy, gw * charge.power, gh); }
-  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(gx + gw * 0.7 - 1, gy - 4, 2, gh + 8);
+  if (phase === 'CHARGE') { ctx.fillStyle = flipOk ? '#ffd447' : '#ff5d5d'; ctx.fillRect(gx, gy, gw * charge.power, gh); }
+  // 뒤집기 가능 마크: 필요 파워 위치 (상대 기울어짐 스택에 따라 이동)
+  const mx = gx + gw * req;
+  ctx.fillStyle = '#ffd447'; ctx.fillRect(mx - 1.5, gy - 6, 3, gh + 12);
+  ctx.beginPath(); ctx.moveTo(mx, gy + gh + 6); ctx.lineTo(mx - 7, gy + gh + 18); ctx.lineTo(mx + 7, gy + gh + 18); ctx.closePath(); ctx.fill();
+  ctx.textAlign = 'center'; ctx.font = '12px monospace';
+  ctx.fillText(`뒤집기 가능 ${Math.round(req * 100)}%`, Math.min(W - 62, Math.max(62, mx)), gy + gh + 32);
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(gx, gy, gw, gh);
   ctx.font = '16px monospace'; ctx.fillStyle = '#fff';
-  ctx.fillText(phase === 'CHARGE' ? `파워 ${(charge.power * 100) | 0}%` : '누르고 있다가 손을 떼면 발사!', W / 2, gy + 56);
+  ctx.fillText(phase === 'CHARGE' ? `파워 ${(charge.power * 100) | 0}%` : '누르고 있다가 손을 떼면 발사!', W / 2, gy + 82);
 
   // HUD
   ctx.textAlign = 'left'; ctx.font = '13px monospace'; ctx.fillStyle = '#aab';

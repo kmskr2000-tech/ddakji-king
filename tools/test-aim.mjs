@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { CFG, Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, powerScale } from '../js/aim.js';
+import { CFG, Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, powerScale, requiredPower } from '../js/aim.js';
 
 const mk = (str = 0, luck = 0, extra = {}) => ({ stats: { str, focus: 0, luck }, hasTape: false, tapeUsed: false, ...extra });
 const def = (tilt = 0) => ({ x: 210, y: 380, tiltStacks: tilt });
@@ -36,6 +36,29 @@ r = judge(400, 380, 1, mk(), d, always); assert.equal(r.level, Level.WHIFF);
 assert.equal(judge(280, 380, 1, mk(0, 0), def(), () => 0.049).crit, true);
 assert.equal(judge(280, 380, 1, mk(0, 0), def(), () => 0.051).crit, false);
 assert.equal(judge(280, 380, 1, mk(0, 2), def(), () => 0.109).crit, true);  // 5+6=11%
+
+
+// 파워 게이트: 필요 파워 70/55/40%
+near(requiredPower(0), 0.70); near(requiredPower(1), 0.55); near(requiredPower(2), 0.40);
+// 불스아이 명중이어도 파워 미달 → INNER 강등 + 스택 +1
+d = def(); r = judge(210, 380, 0.69, mk(), d, never);
+assert.deepEqual([r.level, r.crit, d.tiltStacks], [Level.INNER, false, 1]);
+d = def(); r = judge(210, 380, 0.70, mk(), d, never); assert.equal(r.level, Level.FLIP);   // 경계 포함
+// 1스택: 55%
+d = def(1); assert.equal(judge(210, 380, 0.54, mk(), d, never).level, Level.INNER); assert.equal(d.tiltStacks, 2);
+d = def(1); assert.equal(judge(210, 380, 0.55, mk(), d, never).level, Level.FLIP);
+// 2스택: 40%, 스택 상한 유지
+d = def(2); assert.equal(judge(210, 380, 0.39, mk(), d, never).level, Level.INNER); assert.equal(d.tiltStacks, 2);
+d = def(2); assert.equal(judge(210, 380, 0.40, mk(), d, never).level, Level.FLIP);
+// 크리티컬 승격 FLIP도 게이트 못 넘음: INNER→FLIP 승격 → 강등, crit=false, 스택 +1
+d = def(); r = judge(240, 380, 0.69, mk(), d, always);
+assert.deepEqual([r.level, r.crit, d.tiltStacks], [Level.INNER, false, 1]);
+// 크리티컬 승격 FLIP 파워 충분 → FLIP 유지
+d = def(); r = judge(240, 380, 0.70, mk(), d, always); assert.deepEqual([r.level, r.crit], [Level.FLIP, true]);
+// 즉시 탭 불스아이: 강등
+d = def(); assert.equal(judge(210, 380, 0, mk(), d, never).level, Level.INNER);
+// 게이트는 WHIFF/MISS에 무관, 테이프 WHIFF→INNER는 게이트 영향 없음
+assert.equal(judge(400, 380, 0.1, mk(), def(), never).level, Level.WHIFF);
 
 // 양면테이프: WHIFF 1회만 INNER로 승격 + 기울어짐 +1, 소진
 const t = mk(0, 0, { hasTape: true }); d = def();
