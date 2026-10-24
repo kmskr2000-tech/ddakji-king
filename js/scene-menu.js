@@ -1,12 +1,13 @@
 // 메뉴 씬: 타이틀, 홈, 지도(상대 선택), 대결 준비, 결과, 설정.
-import { App } from './app.js?v=1792844889';
-import { UI, view, topBar, ease } from './ui.js?v=1792844889';
-import { text, rr, drawDdakji, drawKid, background, coin, ticket, itemIcon, crown, shade, star } from './gfx.js?v=1792844889';
-import { REGIONS, OPPONENTS, OPP_BY_ID, DDAKJI_BY_ID, ITEM_INFO, ITEM_ORDER, RARITY, DAILY, DDAKJI } from './data.js?v=1792844889';
-import { titleOf, nextOpponent, isUnlocked, isBeaten, regionUnlocked, regionCleared, settle, dailyPending, claimDaily, equippedDdakji, baseStats, collectionCount, playerGuard } from './game.js?v=1792844889';
-import { guardMul } from './data.js?v=1792844889';
-import { Sound } from './audio.js?v=1792844889';
-import { Ads, track, share, Haptics } from './platform.js?v=1792844889';
+import { App } from './app.js?v=1792845191';
+import { UI, view, topBar, ease } from './ui.js?v=1792845191';
+import { text, rr, drawDdakji, drawKid, background, coin, ticket, itemIcon, crown, shade, star } from './gfx.js?v=1792845191';
+import { REGIONS, OPPONENTS, OPP_BY_ID, DDAKJI_BY_ID, ITEM_INFO, ITEM_ORDER, RARITY, DAILY, DDAKJI } from './data.js?v=1792845191';
+import { endlessUnlocked, endlessOpp, settleEndless, achPending } from './game.js?v=1792845191';
+import { titleOf, nextOpponent, isUnlocked, isBeaten, regionUnlocked, regionCleared, settle, dailyPending, claimDaily, equippedDdakji, baseStats, collectionCount, playerGuard } from './game.js?v=1792845191';
+import { guardMul } from './data.js?v=1792845191';
+import { Sound } from './audio.js?v=1792845191';
+import { Ads, track, share, Haptics } from './platform.js?v=1792845191';
 import { ME_LOOK } from './scene-battle.js';
 
 const AD_COIN_COOLDOWN = 10 * 60 * 1000;
@@ -66,8 +67,11 @@ export const HomeScene = {
     // 상단
     ctx.fillStyle = 'rgba(20,12,30,.5)'; ctx.fillRect(0, 0, W, 64);
     UI.button('settings', 10, 12, 44, 40, '⚙', { color: '#ffffff', size: 22, radius: 12, onClick: () => { this.modal = { kind: 'settings', t: 0, confirm: 0 }; } });
-    text(ctx, titleOf(S), 64, 24, { size: 14, align: 'left', color: '#ffd447' });
-    text(ctx, '나의 딱지 인생', 64, 45, { size: 18, align: 'left', color: '#fff', stroke: '#2b1d14', sw: 4 });
+    const pend = achPending(S);
+    UI.button('ach', 60, 12, 44, 40, '🏆', { color: '#ffffff', size: 20, radius: 12, onClick: () => App.go('ach') });
+    if (pend) { ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(100, 14, 9, 0, 7); ctx.fill(); text(ctx, String(pend), 100, 15, { size: 12, color: '#fff' }); }
+    text(ctx, titleOf(S), 114, 24, { size: 14, align: 'left', color: '#ffd447' });
+    text(ctx, '나의 딱지 인생', 114, 45, { size: 18, align: 'left', color: '#fff', stroke: '#2b1d14', sw: 4 });
     UI.wallet(S, W - 144, 15);
     // 플레이어 + 장착 딱지
     const d = equippedDdakji(S);
@@ -139,7 +143,8 @@ export const HomeScene = {
       ctx.restore();
     } else if (m.kind === 'settings') {
       UI.modal(0.6, () => { this.modal = null; });
-      const ph = 470, py = (H - ph) / 2, st = S.settings;
+      const canInstall = App.install?.canInstall?.();
+      const ph = canInstall ? 530 : 470, py = (H - ph) / 2, st = S.settings;
       UI.panel(30, py, W - 60, ph);
       text(ctx, '설정', W / 2, py + 36, { size: 30, color: '#3a1f12' });
       const row = (id, label, on, y, fn) => {
@@ -160,8 +165,11 @@ export const HomeScene = {
         if (m.confirm < 2) { m.confirm++; return; }
         App.resetAll(); this.modal = null; UI.toast('처음부터 다시 시작해요'); App.go('title');
       } });
+      if (canInstall) UI.button('install', 60, py + 460, W - 120, 46, '홈 화면에 설치하기', { color: '#7bd67b', fg: '#fff', size: 19, onClick: async () => { if (await App.install.prompt()) { track('pwa_install'); UI.toast('설치 완료!'); } } });
       UI.button('close', 60, py + 402, W - 120, 48, '닫기', { color: '#ffcc33', size: 20, onClick: () => { this.modal = null; } });
       text(ctx, `버전 ${window.__V || 'dev'}`, W / 2, py + ph + 18, { size: 12, color: 'rgba(255,255,255,.7)' });
+      UI.zone('privacy', W / 2 - 80, py + ph + 30, 160, 26, () => { window.open('privacy.html', '_blank', 'noopener'); });
+      text(ctx, '개인정보처리방침', W / 2, py + ph + 43, { size: 13, color: '#bfe9ff' });
     } else if (m.kind === 'ending') {
       UI.modal(0.75);
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(e, e); ctx.translate(-W / 2, -H / 2);
@@ -183,15 +191,16 @@ export const MapScene = {
   enter(p = {}) {
     this.t = 0; this.sel = null; this.vy = 0; this.drag = null;
     Sound.playMusic('home');
-    const pre = p.sel && OPP_BY_ID[p.sel];
-    if (pre && isUnlocked(App.S, pre)) this.sel = { o: pre, item: '', t: 0 };
+    const pre = p.sel === 'endless' ? (endlessUnlocked(App.S) ? endlessOpp(App.S) : null) : p.sel && OPP_BY_ID[p.sel];
+    if (pre && (pre.endless || isUnlocked(App.S, pre))) this.sel = { o: pre, item: '', t: 0 };
     const nxt = pre || nextOpponent(App.S);
     this.scroll = 0;
-    if (nxt) this.scroll = Math.max(0, this.rowY(nxt) - view.H * 0.35);
+    if (nxt && !nxt.endless) this.scroll = Math.max(0, this.rowY(nxt) - view.H * 0.35);
+    else if (!nxt || nxt.endless) this.scroll = this.contentH();
     this.clampScroll();
   },
   rowY(o) { return 80 + (o.region - 1) * (HEAD_H + 5 * ROW_H + 16) + HEAD_H + o.idx * ROW_H; },
-  contentH() { return 80 + 6 * (HEAD_H + 5 * ROW_H + 16) + 20; },
+  contentH() { return 80 + 6 * (HEAD_H + 5 * ROW_H + 16) + 140; },
   clampScroll() { this.scroll = Math.max(0, Math.min(this.contentH() - view.H, this.scroll)); },
   down(p) { if (!this.sel) { this.drag = { y: p.y, s: this.scroll, last: p.y, t: performance.now() }; this.vy = 0; } },
   move(p) { if (this.drag) { const now = performance.now(); this.vy = (this.drag.last - p.y) / Math.max(1, now - this.drag.t) * 1000; this.drag.last = p.y; this.drag.t = now; this.scroll = this.drag.s + (this.drag.y - p.y); this.clampScroll(); } },
@@ -216,9 +225,22 @@ export const MapScene = {
       if (regionCleared(S, R.id)) text(ctx, '정복!', W - 40, y0 + 33, { size: 20, color: '#ffe066', stroke: '#2b1d14', sw: 4, align: 'right' });
       for (const o of OPPONENTS.filter((q) => q.region === R.id)) this.drawRow(ctx, o, this.rowY(o));
     }
+    this.drawEndless(ctx, 80 + 6 * (HEAD_H + 5 * ROW_H + 16));
     ctx.restore();
     topBar(S, '상대 고르기', () => App.go('home'));
     if (this.sel) this.drawPrep(ctx);
+  },
+  drawEndless(ctx, y) {
+    const { W, H } = view, S = App.S, un = endlessUnlocked(S);
+    const g = ctx.createLinearGradient(0, y, W, y + 110);
+    g.addColorStop(0, un ? '#3b2a7a' : '#444'); g.addColorStop(1, un ? '#c73a2b' : '#333');
+    ctx.fillStyle = g; rr(ctx, 12, y, W - 24, 110, 16); ctx.fill();
+    ctx.strokeStyle = un ? '#ffd447' : '#666'; ctx.lineWidth = 3; rr(ctx, 12, y, W - 24, 110, 16); ctx.stroke();
+    text(ctx, '∞ 무한 도장깨기', 30, y + 30, { size: 26, align: 'left', color: un ? '#ffe066' : '#aaa', stroke: '#2b1d14', sw: 5 });
+    text(ctx, un ? `연승 ${S.endless.streak} · 최고 ${S.endless.best}연승 · 이길수록 강해진다` : '딱지왕을 이기면 열려요', 30, y + 62, { size: 15, align: 'left', color: '#fff', maxW: W - 70 });
+    if (un) text(ctx, '도전하기 ▶', W - 36, y + 90, { size: 18, align: 'right', color: '#fff' });
+    const top = y - this.scroll;
+    if (un && top > 60 && top < H - 20) UI.zone('endless', 12, top, W - 24, 110, () => { this.sel = { o: endlessOpp(S), item: '', t: 0 }; });
   },
   drawRow(ctx, o, y) {
     const { W, H } = view, S = App.S;
@@ -248,7 +270,7 @@ export const MapScene = {
     ctx.save(); ctx.translate(W / 2, py + ph / 2); ctx.scale(e, e); ctx.translate(-W / 2, -(py + ph / 2));
     UI.panel(16, py, W - 32, ph);
     drawKid(ctx, o.look, 84, py + 76, 44, 'angry', this.t);
-    text(ctx, (o.boss ? '★ BOSS ' : '') + REGIONS[o.region - 1].name, 144, py + 34, { size: 14, align: 'left', color: '#c0392b' });
+    text(ctx, o.endless ? `무한 도장깨기 · 현재 ${S.endless.streak}연승` : (o.boss ? '★ BOSS ' : '') + REGIONS[o.region - 1].name, 144, py + 34, { size: 14, align: 'left', color: '#c0392b' });
     text(ctx, o.name, 144, py + 62, { size: 24, align: 'left', color: '#3a1f12', maxW: W - 180 });
     text(ctx, `“${o.quote}”`, 144, py + 92, { size: 15, align: 'left', color: '#8a6a50', maxW: W - 180 });
     text(ctx, `힘 ${o.stats.str} · 집중 ${o.stats.focus} · 운 ${o.stats.luck} · 딱지 ${o.lives}장`, W / 2, py + 142, { size: 16, color: '#3a1f12' });
@@ -263,7 +285,8 @@ export const MapScene = {
     ctx.fillStyle = '#f3e3c3'; rr(ctx, 36, py + 190, W - 72, 74, 12); ctx.fill();
     coin(ctx, 62, py + 214, 11);
     text(ctx, `승리 시 ${won ? Math.round(o.reward * 0.5) : o.reward} 코인`, 80, py + 215, { size: 18, align: 'left', color: '#3a1f12' });
-    if (!won) { drawDdakji(ctx, DDAKJI_BY_ID[o.ddakji], 62, py + 244, 12, { shadow: false }); text(ctx, `+ ${DDAKJI_BY_ID[o.ddakji].name} 획득`, 80, py + 245, { size: 16, align: 'left', color: RARITY[DDAKJI_BY_ID[o.ddakji].rarity].color, maxW: W - 130 }); }
+    if (o.endless) text(ctx, '지면 연승 기록이 끊겨요!', 80, py + 245, { size: 15, align: 'left', color: '#c0392b' });
+    else if (!won) { drawDdakji(ctx, DDAKJI_BY_ID[o.ddakji], 62, py + 244, 12, { shadow: false }); text(ctx, `+ ${DDAKJI_BY_ID[o.ddakji].name} 획득`, 80, py + 245, { size: 16, align: 'left', color: RARITY[DDAKJI_BY_ID[o.ddakji].rarity].color, maxW: W - 130 }); }
     else text(ctx, '재대결 (보상 50%)', 80, py + 245, { size: 15, align: 'left', color: '#8a6a50' });
     // 아이템 선택
     text(ctx, '아이템 1개 사용 (선택)', W / 2, py + 290, { size: 16, color: '#3a1f12' });
@@ -278,7 +301,7 @@ export const MapScene = {
       UI.zone('item-' + id, x + 3, y, iw - 6, 74, () => { if (!n) { UI.toast('문방구에서 살 수 있어요'); return; } sel.item = on ? '' : id; }, n ? 'tap' : 'error');
     });
     text(ctx, sel.item ? ITEM_INFO[sel.item].desc : '아이템 없이 도전', W / 2, py + 400, { size: 15, color: '#c0392b' });
-    UI.button('fight', 40, py + 420, W - 80, 64, '도전!', { color: '#ff6b5b', fg: '#fff', size: 30, pulse: true, sfx: 'coin', onClick: () => App.go('battle', { opp: o.id, item: sel.item }) });
+    UI.button('fight', 40, py + 420, W - 80, 64, '도전!', { color: '#ff6b5b', fg: '#fff', size: 30, pulse: true, sfx: 'coin', onClick: () => App.go('battle', { opp: o.id, oppObj: o.endless ? o : undefined, item: sel.item }) });
     UI.button('cancel', 40, py + 494, W - 80, 34, '닫기', { color: '#e9e1d4', size: 16, onClick: () => { this.sel = null; } });
     ctx.restore();
   },
@@ -288,9 +311,9 @@ export const MapScene = {
 export const ResultScene = {
   enter(p) {
     this.p = p; this.t = 0; this.doubled = false;
-    const o = OPP_BY_ID[p.opp];
+    const o = p.oppObj || OPP_BY_ID[p.opp];
     this.o = o;
-    this.r = settle(App.S, o, { win: p.win, flips: p.flips, crits: p.crits });
+    this.r = (o.endless ? settleEndless : settle)(App.S, o, { win: p.win, flips: p.flips, crits: p.crits });
     if (!App.S.tutorial) App.S.tutorial = true;
     App.persist();
     this.shown = 0;
@@ -324,6 +347,8 @@ export const ResultScene = {
       drawDdakji(ctx, d, 80, py + 160, 26 * ease.outBack(k), { rot: (1 - k) * 4, glow: RARITY[d.rarity].color });
       text(ctx, '딱지 획득!', 122, py + 146, { size: 16, align: 'left', color: '#c0392b' });
       text(ctx, `${d.name} [${RARITY[d.rarity].name}]`, 122, py + 172, { size: 17, align: 'left', color: RARITY[d.rarity].color, maxW: W - 170 });
+    } else if (o.endless) {
+      text(ctx, p.win ? `${S.endless.streak}연승! (최고 ${S.endless.best})` : `연승 끝… 최고 기록 ${S.endless.best}연승`, W / 2, py + 160, { size: 20, color: p.win ? '#c0392b' : '#4a5a8a' });
     } else if (!p.win) {
       const tips = ['강화에서 힘을 올리면 판정 원이 커져요', '집중을 올리면 조준점이 덜 흔들려요', '방어가 높은 딱지를 장착해 보세요', '상대 차례엔 타이밍 맞춰 터치해서 버티세요', '아이템을 쓰면 훨씬 유리해요'];
       text(ctx, '💡 ' + tips[(o.n + S.record.losses) % tips.length], W / 2, py + 160, { size: 15, color: '#3a1f12', maxW: W - 80 });
@@ -338,8 +363,9 @@ export const ResultScene = {
     }
     const nxt = nextOpponent(S);
     const bw = (W - 70) / 2;
-    UI.button('retry', 30, by, bw, 58, '다시 하기', { color: '#4aa3ff', fg: '#fff', size: 21, onClick: () => App.go('map', { sel: o.id }) });
-    if (p.win && nxt && nxt.id !== o.id) UI.button('next', 40 + bw, by, bw, 58, '다음 상대', { color: '#ff6b5b', fg: '#fff', size: 21, pulse: true, onClick: () => App.go('map', { sel: nxt.id }) });
+    UI.button('retry', 30, by, bw, 58, o.endless && p.win ? '다음 도전자' : '다시 하기', { color: '#4aa3ff', fg: '#fff', size: 21, onClick: () => App.go('map', { sel: o.id }) });
+    if (o.endless) UI.button('upg', 40 + bw, by, bw, 58, '강화하러', { color: '#7bd67b', fg: '#fff', size: 21, onClick: () => App.go('upgrade') });
+    else if (p.win && nxt && nxt.id !== o.id) UI.button('next', 40 + bw, by, bw, 58, '다음 상대', { color: '#ff6b5b', fg: '#fff', size: 21, pulse: true, onClick: () => App.go('map', { sel: nxt.id }) });
     else UI.button('upg', 40 + bw, by, bw, 58, p.win ? '홈으로' : '강화하러', { color: '#7bd67b', fg: '#fff', size: 21, onClick: () => App.go(p.win ? 'home' : 'upgrade') });
     UI.button('home', 30, by + 70, W - 60, 44, '홈', { color: '#ffffff', size: 18, onClick: () => App.go('home') });
     if (Ads.busy) HomeScene.drawAd(ctx);

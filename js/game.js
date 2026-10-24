@@ -1,6 +1,6 @@
 // 진행·경제 규칙. 세이브 상태 S를 받아 변경하는 순수 로직 (렌더 무관).
-import { effectiveStats } from './aim.js?v=1792844889';
-import { DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, guardMul } from './data.js?v=1792844889';
+import { effectiveStats } from './aim.js?v=1792845191';
+import { DDAKJI, DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, ACHIEVEMENTS, guardMul } from './data.js?v=1792845191';
 
 export const equippedDdakji = (S) => DDAKJI_BY_ID[S.equipped] || DDAKJI_BY_ID.starter;
 
@@ -85,4 +85,49 @@ export function claimDaily(S, p, mul = 1) {
   S.daily = { last: p.today, streak: p.streak };
   if (p.reward === 'ticket') S.tickets += mul;
   else S.coins += p.reward * mul;
+}
+
+// 도전과제 진행도
+export function achStat(S, stat) {
+  switch (stat) {
+    case 'collection': return collectionCount(S);
+    case 'maxStat': return Math.max(S.stats.str, S.stats.focus, S.stats.luck);
+    case 'regions': return clearedRegions(S);
+    case 'endlessBest': return S.endless.best;
+    default: return S.record[stat] || 0;
+  }
+}
+export const achReady = (S, a) => !S.ach[a.id] && achStat(S, a.stat) >= a.n;
+export const achPending = (S) => ACHIEVEMENTS.filter((a) => achReady(S, a)).length;
+export function claimAch(S, a) {
+  if (!achReady(S, a)) return false;
+  S.ach[a.id] = 1; S.coins += a.coins; S.tickets += a.tickets || 0;
+  return true;
+}
+
+// 무한 도장깨기: 딱지왕을 이긴 뒤 열림. 연승할수록 강해지고 보상도 커진다.
+export const endlessUnlocked = (S) => regionCleared(S, 6);
+export function endlessOpp(S, rng = Math.random) {
+  const k = S.endless.streak;
+  const base = OPPONENTS[Math.floor(rng() * OPPONENTS.length)];
+  const pool = DDAKJI.filter((d) => d.id !== 'starter');
+  const boss = k % 5 === 4;
+  return {
+    id: 'endless', endless: true, n: -1, region: 6, idx: 0, boss,
+    name: `${k + 1}번째 도전자 ${base.name.split(' ').pop()}`, quote: boss ? '도장의 사범이다!' : '딱지왕, 한 판 붙자!',
+    look: base.look, stats: { str: 6, focus: 6, luck: Math.min(6, 3 + Math.floor(k / 3)) },
+    skill: Math.min(0.995, 0.9 + 0.006 * k + (boss ? 0.03 : 0)),
+    ddakji: pool[Math.floor(rng() * pool.length)].id,
+    lives: boss ? 3 : 2,
+    reward: Math.round((260 + 30 * k) * (boss ? 1.8 : 1)),
+  };
+}
+export function settleEndless(S, o, { win, flips = 0, crits = 0 }) {
+  let coins;
+  if (win) { S.endless.streak++; S.endless.best = Math.max(S.endless.best, S.endless.streak); S.record.wins++; coins = o.reward; }
+  else { S.endless.streak = 0; S.record.losses++; coins = Math.round(o.reward * 0.15); }
+  coins += flips * 5 + crits * 3;
+  S.record.flips += flips; S.record.crits += crits;
+  S.coins += coins;
+  return { coins, drop: null, first: false };
 }

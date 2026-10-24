@@ -1,5 +1,5 @@
 // 상대 AI 타격 모델 + 버티기(방어) 판정. 순수 함수 — 시뮬레이션 테스트에서도 사용.
-import { Level, judge } from './aim.js?v=1792844889';
+import { Level, judge } from './aim.js?v=1792845191';
 
 export function randn(rng = Math.random) {
   let u = 0, v = 0;

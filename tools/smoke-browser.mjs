@@ -85,6 +85,24 @@ await until(() => ['aim', 'charge', 'oppWind'].includes(window.__ddakji.battle()
 await shot('14-boss');
 await until(() => window.__ddakji.App.sceneName === 'result', 120000); await wait(1500);
 await shot('15-boss-result');
+// 엔딩 → 도전과제 → 무한 도장깨기
+await tap('home'); await until(() => window.__ddakji.App.sceneName === 'home'); await wait(800);
+await shot('16-ending');
+await tap('endok'); await wait(300);
+await tap('ach'); await until(() => window.__ddakji.App.sceneName === 'ach'); await wait(400);
+await shot('17-ach');
+const c0 = await page.evaluate(() => window.__ddakji.App.S.coins);
+await tap('ach-win1'); await wait(300);
+const c1 = await page.evaluate(() => window.__ddakji.App.S.coins);
+console.log('achievement win1 coins', c0, '→', c1);
+if (c1 !== c0 + 100) { console.error('achievement claim failed'); process.exit(1); }
+await page.evaluate(() => { for (let i = 1; i <= 30; i++) window.__ddakji.App.S.beaten['p' + i] = 1; window.__ddakji.go('map', { sel: 'endless' }); });
+await until(() => window.__ddakji.App.sceneName === 'map'); await wait(600);
+await shot('18-endless-prep');
+await tap('fight'); await until(() => window.__ddakji.App.sceneName === 'battle'); await page.evaluate(() => { window.__ddakji.auto = true; });
+await until(() => window.__ddakji.App.sceneName === 'result', 120000); await wait(1500);
+await shot('19-endless-result');
+console.log('endless', JSON.stringify(await page.evaluate(() => window.__ddakji.App.S.endless)));
 const saved = await page.evaluate(() => localStorage.getItem('ddakji-king-save-v1')?.length || 0);
 console.log('save bytes', saved);
 await browser.close(); server.close();

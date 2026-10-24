@@ -152,3 +152,28 @@ export const DAILY = [100, 150, 200, 250, 300, 400, 'ticket'];
 
 // 칭호: 최고 클리어 지역 기준
 export const TITLES = ['동네 꼬마', '골목대장', '운동장 스타', '문방구 VIP', '옥상의 승부사', '시장통 고수', '딱지왕'];
+
+// 도전과제: stat(S) ≥ n 이면 수령 가능. 보상은 코인(+뽑기권)
+export const ACHIEVEMENTS = [
+  { id: 'win1', name: '첫 승리', desc: '대결에서 1번 이기기', stat: 'wins', n: 1, coins: 100 },
+  { id: 'win10', name: '동네 승부사', desc: '대결에서 10번 이기기', stat: 'wins', n: 10, coins: 300 },
+  { id: 'win50', name: '백전노장', desc: '대결에서 50번 이기기', stat: 'wins', n: 50, coins: 1000, tickets: 1 },
+  { id: 'flip20', name: '뒤집기 장인', desc: '딱지 20장 뒤집기', stat: 'flips', n: 20, coins: 300 },
+  { id: 'flip100', name: '뒤집기 달인', desc: '딱지 100장 뒤집기', stat: 'flips', n: 100, coins: 1000, tickets: 1 },
+  { id: 'crit10', name: '번개 손목', desc: '크리티컬 10번', stat: 'crits', n: 10, coins: 300 },
+  { id: 'block10', name: '철벽 수비', desc: '완벽하게 버티기 10번', stat: 'perfectBlocks', n: 10, coins: 300 },
+  { id: 'block50', name: '움직이지 않는 산', desc: '완벽하게 버티기 50번', stat: 'perfectBlocks', n: 50, coins: 800 },
+  { id: 'col10', name: '꼬마 수집가', desc: '딱지 10종 모으기', stat: 'collection', n: 10, coins: 300 },
+  { id: 'col25', name: '딱지 박사', desc: '딱지 25종 모으기', stat: 'collection', n: 25, coins: 800, tickets: 1 },
+  { id: 'colAll', name: '딱지 대백과', desc: '모든 딱지 모으기', stat: 'collection', n: 42, coins: 5000, tickets: 3 },
+  { id: 'pull10', name: '뽑기 마니아', desc: '문방구 뽑기 10번', stat: 'pulls', n: 10, coins: 300 },
+  { id: 'max', name: '만렙 손목', desc: '스탯 하나를 6레벨로', stat: 'maxStat', n: 6, coins: 500 },
+  { id: 'reg1', name: '골목 정복', desc: '1지역 보스 이기기', stat: 'regions', n: 1, coins: 200 },
+  { id: 'reg2', name: '운동장 정복', desc: '2지역 보스 이기기', stat: 'regions', n: 2, coins: 300 },
+  { id: 'reg3', name: '문방구 정복', desc: '3지역 보스 이기기', stat: 'regions', n: 3, coins: 500, tickets: 1 },
+  { id: 'reg4', name: '옥상 정복', desc: '4지역 보스 이기기', stat: 'regions', n: 4, coins: 700 },
+  { id: 'reg5', name: '시장 정복', desc: '5지역 보스 이기기', stat: 'regions', n: 5, coins: 900, tickets: 1 },
+  { id: 'reg6', name: '전국 딱지왕', desc: '딱지왕 이기기', stat: 'regions', n: 6, coins: 2000, tickets: 2 },
+  { id: 'end5', name: '도장깨기 5연승', desc: '무한 도장깨기 5연승', stat: 'endlessBest', n: 5, coins: 1000 },
+  { id: 'end20', name: '도장깨기 20연승', desc: '무한 도장깨기 20연승', stat: 'endlessBest', n: 20, coins: 3000, tickets: 2 },
+];

@@ -1,11 +1,12 @@
 // 부트스트랩: 캔버스·입력·루프·씬 등록. 게임 규칙은 aim.js / game.js, 화면은 scene-*.js.
-import { App } from './app.js?v=1792844889';
-import { UI, view } from './ui.js?v=1792844889';
-import { Sound } from './audio.js?v=1792844889';
-import { track } from './platform.js?v=1792844889';
-import { registerSW } from './pwa.js?v=1792844889';
+import { App } from './app.js?v=1792845191';
+import { UI, view } from './ui.js?v=1792845191';
+import { Sound } from './audio.js?v=1792845191';
+import { track } from './platform.js?v=1792845191';
+import { registerSW, setupInstallPrompt } from './pwa.js?v=1792845191';
 import { BattleScene } from './scene-battle.js';
 import { TitleScene, HomeScene, MapScene, ResultScene } from './scene-menu.js';
+import { AchScene } from './scene-extra.js';
 import { UpgradeScene, ShopScene, CollectionScene } from './scene-shop.js';
 
 // 자가업데이트: version.json(no-store) vs window.__V. 다르면 ?v=새버전으로 교체 (같으면 무동작 = 루프 없음)
@@ -32,7 +33,8 @@ function resize() {
 }
 addEventListener('resize', resize); resize();
 
-App.scenes = { title: TitleScene, home: HomeScene, map: MapScene, battle: BattleScene, result: ResultScene, upgrade: UpgradeScene, shop: ShopScene, collection: CollectionScene };
+App.scenes = { title: TitleScene, home: HomeScene, map: MapScene, battle: BattleScene, result: ResultScene, upgrade: UpgradeScene, shop: ShopScene, collection: CollectionScene, ach: AchScene };
+App.install = setupInstallPrompt();
 App.applySettings();
 
 // 입력: 논리 좌표로 변환 → UI 우선, 나머지는 씬

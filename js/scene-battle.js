@@ -1,13 +1,13 @@
 // 대결 씬: 가위바위보 → 번갈아 치기. 내 차례 = 조준·차지·발사, 상대 차례 = 타이밍 맞춰 버티기.
-import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792844889';
-import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792844889';
-import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792844889';
-import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792844889';
-import { App } from './app.js?v=1792844889';
-import { UI, view, ease } from './ui.js?v=1792844889';
-import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792844889';
-import { Sound } from './audio.js?v=1792844889';
-import { Haptics, track } from './platform.js?v=1792844889';
+import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792845191';
+import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792845191';
+import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792845191';
+import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792845191';
+import { App } from './app.js?v=1792845191';
+import { UI, view, ease } from './ui.js?v=1792845191';
+import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792845191';
+import { Sound } from './audio.js?v=1792845191';
+import { Haptics, track } from './platform.js?v=1792845191';
 
 export const ME_LOOK = { skin: '#ffd9b8', hair: '#2b1d14', hs: 1, shirt: '#ff6b5b', acc: 'none', age: 'kid' };
 const DS = 80;                    // 딱지 반변(px). 판정 원 반경 CFG.ddakjiR(100) 근사
@@ -26,9 +26,9 @@ function newAim() {
 
 export const BattleScene = {
   ownFx: true,
-  enter({ opp, item = '' }) {
+  enter({ opp, oppObj, item = '' }) {
     const S = App.S;
-    const o = OPP_BY_ID[opp];
+    const o = oppObj || OPP_BY_ID[opp];
     const R = REGIONS[o.region - 1];
     if (item && (S.items[item] || 0) > 0) { S.items[item]--; App.persist(); } else item = '';
     const stats = battleStats(S, item);
@@ -229,7 +229,7 @@ export const BattleScene = {
         break;
       case 'end':
         if (B.t > 2.4) {
-          App.go('result', { opp: B.o.id, win: B.win, flips: B.flips, crits: B.crits, perfect: B.perfect, item: B.item });
+          App.go('result', { opp: B.o.id, oppObj: B.o.endless ? B.o : undefined, win: B.win, flips: B.flips, crits: B.crits, perfect: B.perfect, item: B.item });
           B.state = 'done';
         }
         break;
@@ -262,7 +262,7 @@ export const BattleScene = {
     if (B.state === 'oppWind') { const k = Math.min(1, B.t / B.windT); bob = -Math.sin(k * Math.PI) * 6; }
     drawKid(ctx, B.o.look, 44, 36 + bob, 22, B.mood, App.t);
     text(ctx, B.o.name, 76, 28, { size: 19, align: 'left', color: '#fff', stroke: '#2b1d14', sw: 4, maxW: 200 });
-    text(ctx, B.o.boss ? `★ 보스 · ${B.R.name}` : B.R.name, 76, 52, { size: 13, align: 'left', color: '#ffd9a0' });
+    text(ctx, B.o.endless ? `무한 도장깨기 · ${App.S.endless.streak}연승 중` : B.o.boss ? `★ 보스 · ${B.R.name}` : B.R.name, 76, 52, { size: 13, align: 'left', color: '#ffd9a0' });
     this.drawLives(ctx, W - 22, 40, B.oppLives, B.maxLives, B.oppDk, -1);
     if (oppTurn) { ctx.strokeStyle = '#ff6b5b'; ctx.lineWidth = 3; rr(ctx, 8, 8, W - 16, 64, 16); ctx.stroke(); }
     // 라운드

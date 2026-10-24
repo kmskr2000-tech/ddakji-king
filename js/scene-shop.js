@@ -1,11 +1,11 @@
 // 성장 씬: 강화, 문방구(뽑기·아이템), 딱지첩(수집·장착).
-import { App } from './app.js?v=1792844889';
-import { UI, view, topBar, ease } from './ui.js?v=1792844889';
-import { text, rr, drawDdakji, drawKid, coin, ticket, itemIcon, shade, star } from './gfx.js?v=1792844889';
-import { DDAKJI, DDAKJI_BY_ID, RARITY, STAT_INFO, ITEM_INFO, ITEM_ORDER, GACHA, guardMul } from './data.js?v=1792844889';
-import { statCost, upgradeStat, buyItem, pull, baseStats, equippedDdakji, collectionCount, dayKey } from './game.js?v=1792844889';
-import { Sound } from './audio.js?v=1792844889';
-import { Ads, track, Haptics } from './platform.js?v=1792844889';
+import { App } from './app.js?v=1792845191';
+import { UI, view, topBar, ease } from './ui.js?v=1792845191';
+import { text, rr, drawDdakji, drawKid, coin, ticket, itemIcon, shade, star } from './gfx.js?v=1792845191';
+import { DDAKJI, DDAKJI_BY_ID, RARITY, STAT_INFO, ITEM_INFO, ITEM_ORDER, GACHA, guardMul } from './data.js?v=1792845191';
+import { statCost, upgradeStat, buyItem, pull, baseStats, equippedDdakji, collectionCount, dayKey } from './game.js?v=1792845191';
+import { Sound } from './audio.js?v=1792845191';
+import { Ads, track, Haptics } from './platform.js?v=1792845191';
 import { HomeScene } from './scene-menu.js';
 
 // ───────── 강화 ─────────
