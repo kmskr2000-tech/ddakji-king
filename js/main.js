@@ -1,9 +1,9 @@
 // 부트스트랩: 캔버스·입력·루프·씬 등록. 게임 규칙은 aim.js / game.js, 화면은 scene-*.js.
-import { App } from './app.js?v=1792845191';
-import { UI, view } from './ui.js?v=1792845191';
-import { Sound } from './audio.js?v=1792845191';
-import { track } from './platform.js?v=1792845191';
-import { registerSW, setupInstallPrompt } from './pwa.js?v=1792845191';
+import { App } from './app.js?v=1792845490';
+import { UI, view } from './ui.js?v=1792845490';
+import { Sound } from './audio.js?v=1792845490';
+import { track } from './platform.js?v=1792845490';
+import { registerSW, setupInstallPrompt } from './pwa.js?v=1792845490';
 import { BattleScene } from './scene-battle.js';
 import { TitleScene, HomeScene, MapScene, ResultScene } from './scene-menu.js';
 import { AchScene } from './scene-extra.js';

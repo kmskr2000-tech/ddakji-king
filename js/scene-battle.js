@@ -1,13 +1,13 @@
 // 대결 씬: 가위바위보 → 번갈아 치기. 내 차례 = 조준·차지·발사, 상대 차례 = 타이밍 맞춰 버티기.
-import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792845191';
-import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792845191';
-import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792845191';
-import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792845191';
-import { App } from './app.js?v=1792845191';
-import { UI, view, ease } from './ui.js?v=1792845191';
-import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792845191';
-import { Sound } from './audio.js?v=1792845191';
-import { Haptics, track } from './platform.js?v=1792845191';
+import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792845490';
+import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792845490';
+import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792845490';
+import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792845490';
+import { App } from './app.js?v=1792845490';
+import { UI, view, ease } from './ui.js?v=1792845490';
+import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792845490';
+import { Sound } from './audio.js?v=1792845490';
+import { Haptics, track } from './platform.js?v=1792845490';
 
 export const ME_LOOK = { skin: '#ffd9b8', hair: '#2b1d14', hs: 1, shirt: '#ff6b5b', acc: 'none', age: 'kid' };
 const DS = 80;                    // 딱지 반변(px). 판정 원 반경 CFG.ddakjiR(100) 근사

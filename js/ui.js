@@ -1,5 +1,5 @@
 // 즉시모드 UI: 매 프레임 버튼을 그리며 등록 → 다음 입력 때 히트테스트. 모달은 layer로 위 버튼만 받는다.
-import { rr, text, shade, coin, ticket } from './gfx.js?v=1792845191';
+import { rr, text, shade, coin, ticket } from './gfx.js?v=1792845490';
 
 export const view = { W: 420, H: 800, scale: 1 };
 

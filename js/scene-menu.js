@@ -1,13 +1,13 @@
 // 메뉴 씬: 타이틀, 홈, 지도(상대 선택), 대결 준비, 결과, 설정.
-import { App } from './app.js?v=1792845191';
-import { UI, view, topBar, ease } from './ui.js?v=1792845191';
-import { text, rr, drawDdakji, drawKid, background, coin, ticket, itemIcon, crown, shade, star } from './gfx.js?v=1792845191';
-import { REGIONS, OPPONENTS, OPP_BY_ID, DDAKJI_BY_ID, ITEM_INFO, ITEM_ORDER, RARITY, DAILY, DDAKJI } from './data.js?v=1792845191';
-import { endlessUnlocked, endlessOpp, settleEndless, achPending } from './game.js?v=1792845191';
-import { titleOf, nextOpponent, isUnlocked, isBeaten, regionUnlocked, regionCleared, settle, dailyPending, claimDaily, equippedDdakji, baseStats, collectionCount, playerGuard } from './game.js?v=1792845191';
-import { guardMul } from './data.js?v=1792845191';
-import { Sound } from './audio.js?v=1792845191';
-import { Ads, track, share, Haptics } from './platform.js?v=1792845191';
+import { App } from './app.js?v=1792845490';
+import { UI, view, topBar, ease } from './ui.js?v=1792845490';
+import { text, rr, drawDdakji, drawKid, background, coin, ticket, itemIcon, crown, shade, star } from './gfx.js?v=1792845490';
+import { REGIONS, OPPONENTS, OPP_BY_ID, DDAKJI_BY_ID, ITEM_INFO, ITEM_ORDER, RARITY, DAILY, DDAKJI } from './data.js?v=1792845490';
+import { endlessUnlocked, endlessOpp, settleEndless, achPending } from './game.js?v=1792845490';
+import { titleOf, nextOpponent, isUnlocked, isBeaten, regionUnlocked, regionCleared, settle, dailyPending, claimDaily, equippedDdakji, baseStats, collectionCount, playerGuard } from './game.js?v=1792845490';
+import { guardMul } from './data.js?v=1792845490';
+import { Sound } from './audio.js?v=1792845490';
+import { Ads, track, share, Haptics } from './platform.js?v=1792845490';
 import { ME_LOOK } from './scene-battle.js';
 
 const AD_COIN_COOLDOWN = 10 * 60 * 1000;
@@ -108,8 +108,8 @@ export const HomeScene = {
         if (ok) { S.coins += AD_COIN; S.adCoinLast = Date.now(); App.persist(); Sound.play('coins'); UI.toast(`코인 +${AD_COIN}!`, '#ffe066'); }
       } });
     }
-    if (Ads.busy) this.drawAd(ctx);
     if (this.modal) this.drawModal(ctx);
+    if (Ads.busy) this.drawAd(ctx);
   },
   drawAd(ctx) {
     const { W, H } = view;
@@ -137,7 +137,7 @@ export const HomeScene = {
         else { coin(ctx, x + cw / 2, y + 42, 11); text(ctx, String(DAILY[i]), x + cw / 2, y + 70, { size: 13, color: '#3a1f12' }); }
         if (done) text(ctx, '✔', x + cw / 2, y + 44, { size: 28, color: '#4fb06d' });
       }
-      const claim = (mul) => { claimDaily(S, m.p, mul); App.persist(); Sound.play('daily'); Sound.play('coins'); App.fx.burst(W / 2, py + 140, { n: 30, colors: ['#ffe066', '#fff'], shape: 'star', speed: 300, size: 6 }); UI.toast(m.p.reward === 'ticket' ? `뽑기권 +${mul}!` : `코인 +${m.p.reward * mul}!`, '#ffe066'); track('daily_claim', { streak: m.p.streak, mul }); this.modal = null; };
+      const claim = (mul) => { if (this.modal !== m || S.daily.last === m.p.today) return; claimDaily(S, m.p, mul); App.persist(); Sound.play('daily'); Sound.play('coins'); App.fx.burst(W / 2, py + 140, { n: 30, colors: ['#ffe066', '#fff'], shape: 'star', speed: 300, size: 6 }); UI.toast(m.p.reward === 'ticket' ? `뽑기권 +${mul}!` : `코인 +${m.p.reward * mul}!`, '#ffe066'); track('daily_claim', { streak: m.p.streak, mul }); this.modal = null; };
       UI.button('claim2', 44, py + 200, W - 88, 60, '▶ 광고 보고 2배 받기', { color: '#ffe066', size: 22, onClick: async () => { if (await Ads.rewarded('daily_x2')) claim(2); } });
       UI.button('claim1', 44, py + 276, W - 88, 52, '그냥 받기', { color: '#ffffff', size: 20, onClick: () => claim(1) });
       ctx.restore();

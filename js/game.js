@@ -1,6 +1,6 @@
 // 진행·경제 규칙. 세이브 상태 S를 받아 변경하는 순수 로직 (렌더 무관).
-import { effectiveStats } from './aim.js?v=1792845191';
-import { DDAKJI, DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, ACHIEVEMENTS, guardMul } from './data.js?v=1792845191';
+import { effectiveStats } from './aim.js?v=1792845490';
+import { DDAKJI, DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, ACHIEVEMENTS, guardMul } from './data.js?v=1792845490';
 
 export const equippedDdakji = (S) => DDAKJI_BY_ID[S.equipped] || DDAKJI_BY_ID.starter;
 

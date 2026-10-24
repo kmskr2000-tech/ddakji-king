@@ -1,11 +1,11 @@
 // 도전과제 씬
-import { App } from './app.js?v=1792845191';
-import { UI, view, topBar } from './ui.js?v=1792845191';
-import { text, rr, coin, ticket } from './gfx.js?v=1792845191';
-import { ACHIEVEMENTS } from './data.js?v=1792845191';
-import { achStat, achReady, claimAch } from './game.js?v=1792845191';
-import { Sound } from './audio.js?v=1792845191';
-import { track } from './platform.js?v=1792845191';
+import { App } from './app.js?v=1792845490';
+import { UI, view, topBar } from './ui.js?v=1792845490';
+import { text, rr, coin, ticket } from './gfx.js?v=1792845490';
+import { ACHIEVEMENTS } from './data.js?v=1792845490';
+import { achStat, achReady, claimAch } from './game.js?v=1792845490';
+import { Sound } from './audio.js?v=1792845490';
+import { track } from './platform.js?v=1792845490';
 
 const ROW = 86;
 
