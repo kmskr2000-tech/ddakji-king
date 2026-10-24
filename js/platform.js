@@ -17,7 +17,8 @@ export const Ads = {
     this.busy = true;
     track('ad_rewarded_start', { placement });
     try {
-      const ok = await this.provider.show(placement);
+      // SDK가 콜백을 안 주면 30초 뒤 실패 처리 (화면 잠김 방지)
+      const ok = await Promise.race([this.provider.show(placement), new Promise((r) => setTimeout(() => r(false), 30000))]);
       track(ok ? 'ad_rewarded_done' : 'ad_rewarded_skip', { placement });
       return !!ok;
     } catch (e) { return false; } finally { this.busy = false; }

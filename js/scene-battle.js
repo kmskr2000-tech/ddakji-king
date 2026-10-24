@@ -1,13 +1,13 @@
 // 대결 씬: 가위바위보 → 번갈아 치기. 내 차례 = 조준·차지·발사, 상대 차례 = 타이밍 맞춰 버티기.
-import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792845490';
-import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792845490';
-import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792845490';
-import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792845490';
-import { App } from './app.js?v=1792845490';
-import { UI, view, ease } from './ui.js?v=1792845490';
-import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792845490';
-import { Sound } from './audio.js?v=1792845490';
-import { Haptics, track } from './platform.js?v=1792845490';
+import { Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1792845610';
+import { aiStrike, judgeWithBlock, blockGrade } from './ai.js?v=1792845610';
+import { OPP_BY_ID, REGIONS, DDAKJI_BY_ID, ITEM_INFO, guardMul } from './data.js?v=1792845610';
+import { battleStats, playerGuard, equippedDdakji } from './game.js?v=1792845610';
+import { App } from './app.js?v=1792845610';
+import { UI, view, ease } from './ui.js?v=1792845610';
+import { drawDdakji, drawKid, background, text, rr, itemIcon, star } from './gfx.js?v=1792845610';
+import { Sound } from './audio.js?v=1792845610';
+import { Haptics, track } from './platform.js?v=1792845610';
 
 export const ME_LOOK = { skin: '#ffd9b8', hair: '#2b1d14', hs: 1, shirt: '#ff6b5b', acc: 'none', age: 'kid' };
 const DS = 80;                    // 딱지 반변(px). 판정 원 반경 CFG.ddakjiR(100) 근사
@@ -30,7 +30,9 @@ export const BattleScene = {
     const S = App.S;
     const o = oppObj || OPP_BY_ID[opp];
     const R = REGIONS[o.region - 1];
-    if (item && (S.items[item] || 0) > 0) { S.items[item]--; App.persist(); } else item = '';
+    if (item && (S.items[item] || 0) > 0) S.items[item]--; else item = '';
+    if (o.endless) S.endless.pending = true;   // 도중 종료 = 패배 처리 (연승 유지 꼼수 방지)
+    App.persist();
     const stats = battleStats(S, item);
     const cx = view.W / 2, cy = Math.round(view.H * 0.47);
     const tutorial = !S.tutorial && o.n === 0;
@@ -81,9 +83,11 @@ export const BattleScene = {
   },
   key(e, isDown) {
     if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault?.(); if (isDown && !e.repeat) this.down(); else if (!isDown) this.up(); }
-    if (e.code === 'Escape' && isDown) B.paused = !B.paused;
+    if (e.code === 'Escape' && isDown && !['end', 'done'].includes(B.state)) { this.cancelCharge(); B.paused = !B.paused; }
   },
-  blur() { if (B && !['end'].includes(B.state)) { if (B.state === 'charge') this.up(); B.paused = true; } },
+  // 충전 중 이탈: 발사하지 않고 조준 상태로 되돌린다
+  cancelCharge() { if (B?.state === 'charge') { B.charge.release(); Sound.stopCharge(); B.state = 'aim'; } },
+  blur() { if (B && !['end', 'done'].includes(B.state)) { this.cancelCharge(); B.paused = true; } },
 
   // ── 진행 ──
   nextTurn() {
@@ -229,7 +233,7 @@ export const BattleScene = {
         break;
       case 'end':
         if (B.t > 2.4) {
-          App.go('result', { opp: B.o.id, oppObj: B.o.endless ? B.o : undefined, win: B.win, flips: B.flips, crits: B.crits, perfect: B.perfect, item: B.item });
+          App.go('result', { opp: B.o.id, oppObj: B.o.endless ? B.o : undefined, win: B.win, gaveUp: !!B.gaveUp, flips: B.flips, crits: B.crits, perfect: B.perfect, item: B.item });
           B.state = 'done';
         }
         break;
@@ -249,7 +253,7 @@ export const BattleScene = {
     this.drawOverlay(ctx);
     App.fx.drawFlash(ctx, W, H);
     // 일시정지 버튼
-    if (!B.paused && B.state !== 'end' && B.state !== 'done') UI.button('pause', W - 54, 76, 44, 40, 'Ⅱ', { color: '#ffffff', size: 20, radius: 12, onClick: () => { if (B.state === 'charge') this.up(); B.paused = true; } });
+    if (!B.paused && B.state !== 'end' && B.state !== 'done') UI.button('pause', W - 54, 76, 44, 40, 'Ⅱ', { color: '#ffffff', size: 20, radius: 12, onClick: () => { this.cancelCharge(); B.paused = true; } });
     if (B.paused) this.drawPause(ctx);
   },
 
@@ -482,7 +486,9 @@ export const BattleScene = {
     text(ctx, '일시정지', W / 2, H * 0.3 + 44, { size: 30, color: '#3a1f12' });
     UI.button('resume', 80, H * 0.3 + 84, W - 160, 56, '계속하기', { color: '#7bd67b', onClick: () => { B.paused = false; } });
     UI.button('giveup', 80, H * 0.3 + 160, W - 160, 50, '포기하기', { color: '#ff8a7a', size: 20, onClick: () => {
-      B.paused = false; B.myLives = 0; B.state = 'end'; B.t = 0; B.win = false; Sound.play('lose');
+      B.paused = false;
+      if (['end', 'done'].includes(B.state)) return;
+      B.myLives = 0; B.state = 'end'; B.t = 0; B.win = false; B.gaveUp = true; Sound.play('lose');
     } });
   },
   debug() { return B && { state: B.state, turn: B.turn, round: B.round, myLives: B.myLives, oppLives: B.oppLives, flips: B.flips }; },

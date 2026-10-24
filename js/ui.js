@@ -1,5 +1,5 @@
 // 즉시모드 UI: 매 프레임 버튼을 그리며 등록 → 다음 입력 때 히트테스트. 모달은 layer로 위 버튼만 받는다.
-import { rr, text, shade, coin, ticket } from './gfx.js?v=1792845490';
+import { rr, text, shade, coin, ticket } from './gfx.js?v=1792845610';
 
 export const view = { W: 420, H: 800, scale: 1 };
 
@@ -46,6 +46,7 @@ export const UI = {
     return true;
   },
   isPressed(id) { return pressed === id; },
+  pressedAny() { return !!pressed; },
   find(id) { const b = last.find((q) => q.id === id); return b && { x: b.x + b.w / 2, y: b.y + b.h / 2, disabled: !!b.disabled }; },  // 테스트용
 
   // 버튼. 반환값 없음 — 클릭은 onClick

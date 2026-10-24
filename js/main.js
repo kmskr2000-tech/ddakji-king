@@ -1,13 +1,13 @@
 // 부트스트랩: 캔버스·입력·루프·씬 등록. 게임 규칙은 aim.js / game.js, 화면은 scene-*.js.
-import { App } from './app.js?v=1792845490';
-import { UI, view } from './ui.js?v=1792845490';
-import { Sound } from './audio.js?v=1792845490';
-import { track } from './platform.js?v=1792845490';
-import { registerSW, setupInstallPrompt } from './pwa.js?v=1792845490';
-import { BattleScene } from './scene-battle.js';
-import { TitleScene, HomeScene, MapScene, ResultScene } from './scene-menu.js';
-import { AchScene } from './scene-extra.js';
-import { UpgradeScene, ShopScene, CollectionScene } from './scene-shop.js';
+import { App } from './app.js?v=1792845610';
+import { UI, view, pointer } from './ui.js?v=1792845610';
+import { Sound } from './audio.js?v=1792845610';
+import { track } from './platform.js?v=1792845610';
+import { registerSW, setupInstallPrompt } from './pwa.js?v=1792845610';
+import { BattleScene } from './scene-battle.js?v=1792845610';
+import { TitleScene, HomeScene, MapScene, ResultScene } from './scene-menu.js?v=1792845610';
+import { AchScene } from './scene-extra.js?v=1792845610';
+import { UpgradeScene, ShopScene, CollectionScene } from './scene-shop.js?v=1792845610';
 
 // 자가업데이트: version.json(no-store) vs window.__V. 다르면 ?v=새버전으로 교체 (같으면 무동작 = 루프 없음)
 if (window.__V) {
@@ -36,6 +36,8 @@ addEventListener('resize', resize); resize();
 App.scenes = { title: TitleScene, home: HomeScene, map: MapScene, battle: BattleScene, result: ResultScene, upgrade: UpgradeScene, shop: ShopScene, collection: CollectionScene, ach: AchScene };
 App.install = setupInstallPrompt();
 App.applySettings();
+// 무한 도장깨기 도중 종료했던 기록 → 패배 처리
+if (App.S.endless.pending) { App.S.endless.pending = false; App.S.endless.streak = 0; App.persist(); }
 
 // 입력: 논리 좌표로 변환 → UI 우선, 나머지는 씬
 const toLocal = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * view.W / r.width, y: (e.clientY - r.top) * view.H / r.height }; };
@@ -54,6 +56,11 @@ cv.addEventListener('pointermove', (e) => {
   if (e.pointerId !== activeId) return;
   const p = toLocal(e);
   UI.move(p.x, p.y);
+  // 목록 행에서 시작한 드래그는 버튼 누름을 취소하고 스크롤로 넘긴다
+  if (consumed && pointer.moved && !UI.pressedAny() && !UI.modalOpen && App.scene?.wheel) {
+    consumed = false;
+    App.scene.down?.({ x: pointer.sx, y: pointer.sy });
+  }
   if (!consumed) App.scene?.move?.(p);
 });
 const end = (e) => {
@@ -75,12 +82,24 @@ addEventListener('keydown', (e) => {
   else if (!e.repeat && (e.code === 'Space' || e.code === 'Enter') && App.sceneName === 'title') App.go('home');
 });
 addEventListener('keyup', (e) => App.scene?.key?.(e, false));
-document.addEventListener('visibilitychange', () => { if (document.hidden) { App.scene?.blur?.(); App.persist(); } });
+// 포인터 업이 안 오는 경우(앱 전환·시스템 제스처) 입력이 막히지 않게 정리
+function resetPointer() {
+  if (activeId === null) return;
+  activeId = null; consumed = false;
+  UI.up(-1, -1);
+}
+cv.addEventListener('lostpointercapture', (e) => { if (e.pointerId === activeId) end(e); });
+addEventListener('blur', () => { resetPointer(); App.scene?.blur?.(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { resetPointer(); App.scene?.blur?.(); App.persist(); } });
 addEventListener('pagehide', () => App.persist());
 
 // 루프
 let last = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame);
+  try { step(now); } catch (e) { console.error(e); UI.end(); resize(); }   // 한 프레임 오류로 루프가 멈추지 않게 (resize로 ctx 상태 초기화)
+}
+function step(now) {
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
   App.t += dt; UI.t = App.t;
   App.updateFade(dt);
@@ -94,7 +113,6 @@ function frame(now) {
   if (App.fade > 0) { ctx.fillStyle = `rgba(16,10,28,${App.fade})`; ctx.fillRect(0, 0, view.W, view.H); }
   ctx.restore();
   UI.end();
-  requestAnimationFrame(frame);
 }
 
 // 폰트 로드(최대 1.5초 대기) 후 시작 → 부트 화면 제거

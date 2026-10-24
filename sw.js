@@ -1,4 +1,4 @@
-const VERSION = '1792845490';
+const VERSION = '1792845610';
 const CACHE = `ddakji-${VERSION}`;
 const PRECACHE = [
   './',

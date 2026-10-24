@@ -18,7 +18,7 @@ export const defaults = () => ({
   adCoinLast: 0,                      // 광고 보상 쿨다운
   adPullDay: '',                      // 하루 1회 광고 무료 뽑기
   ach: {},                            // 도전과제 id → 보상 수령
-  endless: { streak: 0, best: 0 },    // 무한 도장깨기
+  endless: { streak: 0, best: 0, pending: false },  // 무한 도장깨기 (pending = 대결 중)
   created: Date.now(),
 });
 
@@ -28,10 +28,13 @@ function merge(base, data) {
     const b = base[k], d = data[k];
     if (d === undefined) continue;
     if (b && typeof b === 'object' && !Array.isArray(b)) base[k] = merge(b, d);
-    else if (typeof d === typeof b) base[k] = d;
+    else if (typeof d === typeof b && (typeof d !== 'number' || Number.isFinite(d))) base[k] = d;
   }
   // 동적 키 맵은 그대로 보존
-  for (const k of ['owned', 'beaten', 'ach']) if (data[k] && typeof data[k] === 'object') base[k] = { ...base[k], ...data[k] };
+  for (const k of ['owned', 'beaten', 'ach']) {
+    if (!data[k] || typeof data[k] !== 'object') continue;
+    for (const [id, v] of Object.entries(data[k])) if (Number.isFinite(v) && v >= 0) base[k][id] = Math.floor(v);
+  }
   return base;
 }
 

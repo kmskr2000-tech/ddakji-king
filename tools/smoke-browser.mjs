@@ -47,6 +47,20 @@ const coins0 = await page.evaluate(() => window.__ddakji.App.S.coins);
 await shot('03-home');
 await tap('play'); await until(() => window.__ddakji.App.sceneName === 'map'); await wait(600);
 await shot('04-map');
+// 행 위에서 시작한 드래그도 스크롤돼야 한다 (리뷰 #3 회귀 방지)
+{
+  const r = await page.evaluate(() => window.__ddakji.find('opp-p1'));
+  const a = await page.evaluate(([x, y]) => window.__ddakji.toClient(x, y), [r.x, r.y + 200]);
+  const s0 = await page.evaluate(() => window.__ddakji.App.scene.scroll);
+  await page.mouse.move(a.x, a.y); await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(a.x, a.y - i * 25);
+  await page.mouse.up(); await wait(400);
+  const s1 = await page.evaluate(() => window.__ddakji.App.scene.scroll);
+  console.log('map drag scroll', s0, '→', Math.round(s1));
+  if (!(s1 > s0 + 100)) { console.error('drag scroll failed'); process.exit(1); }
+  if (await page.evaluate(() => !!window.__ddakji.App.scene.sel)) { console.error('drag opened prep'); process.exit(1); }
+  await page.evaluate(() => { const m = window.__ddakji.App.scene; m.vy = 0; m.scroll = 0; }); await wait(200);
+}
 await tap('opp-p1'); await wait(500); await shot('05-prep');
 await tap('item-coin500'); await wait(200);
 await tap('fight'); await until(() => window.__ddakji.App.sceneName === 'battle'); await wait(1200);
@@ -85,6 +99,18 @@ await until(() => ['aim', 'charge', 'oppWind'].includes(window.__ddakji.battle()
 await shot('14-boss');
 await until(() => window.__ddakji.App.sceneName === 'result', 120000); await wait(1500);
 await shot('15-boss-result');
+// 포기하면 참가상 없음 (리뷰 #2 회귀 방지)
+{
+  await tap('home'); await until(() => window.__ddakji.App.sceneName === 'home'); await wait(300);
+  await page.evaluate(() => { window.__ddakji.auto = false; window.__ddakji.go('battle', { opp: 'p2' }); });
+  await until(() => window.__ddakji.App.sceneName === 'battle'); await wait(500);
+  const c = await page.evaluate(() => window.__ddakji.App.S.coins);
+  await tap('pause'); await wait(200); await tap('giveup');
+  await until(() => window.__ddakji.App.sceneName === 'result', 10000); await wait(300);
+  const c2 = await page.evaluate(() => window.__ddakji.App.S.coins);
+  console.log('give up coins', c, '→', c2);
+  if (c2 !== c) { console.error('give-up paid coins'); process.exit(1); }
+}
 // 엔딩 → 도전과제 → 무한 도장깨기
 await tap('home'); await until(() => window.__ddakji.App.sceneName === 'home'); await wait(800);
 await shot('16-ending');

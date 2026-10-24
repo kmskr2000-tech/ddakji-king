@@ -1,8 +1,8 @@
 // 전역 앱 컨텍스트: 세이브, 씬 전환, 사운드·진동 설정 반영. 씬 모듈들이 공유한다.
-import { load, save, wipe, defaults } from './save.js?v=1792845490';
-import { Sound } from './audio.js?v=1792845490';
-import { Haptics, track } from './platform.js?v=1792845490';
-import { FX } from './gfx.js?v=1792845490';
+import { load, save, wipe, defaults } from './save.js?v=1792845610';
+import { Sound } from './audio.js?v=1792845610';
+import { Haptics, track } from './platform.js?v=1792845610';
+import { FX } from './gfx.js?v=1792845610';
 
 export const App = {
   S: load(),

@@ -1,6 +1,6 @@
 // 진행·경제 규칙. 세이브 상태 S를 받아 변경하는 순수 로직 (렌더 무관).
-import { effectiveStats } from './aim.js?v=1792845490';
-import { DDAKJI, DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, ACHIEVEMENTS, guardMul } from './data.js?v=1792845490';
+import { effectiveStats } from './aim.js?v=1792845610';
+import { DDAKJI, DDAKJI_BY_ID, OPPONENTS, REGIONS, STAT_COST, ITEM_INFO, GACHA, GACHA_POOL, DAILY, TITLES, ACHIEVEMENTS, guardMul } from './data.js?v=1792845610';
 
 export const equippedDdakji = (S) => DDAKJI_BY_ID[S.equipped] || DDAKJI_BY_ID.starter;
 
@@ -40,10 +40,12 @@ export const nextOpponent = (S) => OPPONENTS.find((o) => !isBeaten(S, o)) || nul
 export const collectionCount = (S) => Object.keys(S.owned).filter((k) => S.owned[k] > 0 && DDAKJI_BY_ID[k]).length;
 
 // 대결 보상. 첫 승리: 전액 + 상대 딱지 획득. 재대결: 50%. 패배: 참가상 15%. 뒤집기·크리 보너스.
-export function settle(S, opp, { win, flips = 0, crits = 0 }) {
+// gaveUp = 포기: 참가상·보너스 없음 (포기 반복 파밍 방지)
+export function settle(S, opp, { win, flips = 0, crits = 0, gaveUp = false }) {
   const first = win && !isBeaten(S, opp);
   let coins = win ? (first ? opp.reward : Math.round(opp.reward * 0.5)) : Math.round(opp.reward * 0.15);
   coins += flips * 5 + crits * 3;
+  if (gaveUp) coins = 0;
   let drop = null;
   if (win) {
     S.beaten[opp.id] = (S.beaten[opp.id] || 0) + 1;
@@ -122,11 +124,13 @@ export function endlessOpp(S, rng = Math.random) {
     reward: Math.round((260 + 30 * k) * (boss ? 1.8 : 1)),
   };
 }
-export function settleEndless(S, o, { win, flips = 0, crits = 0 }) {
+export function settleEndless(S, o, { win, flips = 0, crits = 0, gaveUp = false }) {
   let coins;
+  S.endless.pending = false;
   if (win) { S.endless.streak++; S.endless.best = Math.max(S.endless.best, S.endless.streak); S.record.wins++; coins = o.reward; }
   else { S.endless.streak = 0; S.record.losses++; coins = Math.round(o.reward * 0.15); }
   coins += flips * 5 + crits * 3;
+  if (gaveUp) coins = 0;
   S.record.flips += flips; S.record.crits += crits;
   S.coins += coins;
   return { coins, drop: null, first: false };

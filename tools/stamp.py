@@ -12,7 +12,7 @@ s = re.sub(r'(href="css/main\.css|src="js/main\.js)(\?v=\d+)?"', rf'\1?v={V}"', 
 h.write_text(s)
 for f in (root / 'js').glob('*.js'):
     t = f.read_text()
-    t = re.sub(r"(from '\./[\w.]+\.js)(\?v=\d+)?'", rf"\1?v={V}'", t)
+    t = re.sub(r"(from '\./[\w.-]+\.js)(\?v=\d+)?'", rf"\1?v={V}'", t)
     f.write_text(t)
 sw = root / 'sw.js'
 if sw.exists():
