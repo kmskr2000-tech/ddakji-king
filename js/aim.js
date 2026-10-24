@@ -91,9 +91,10 @@ export class Charge {
 export const powerScale = (power) => CFG.power.min + CFG.power.range * clamp(power, 0, 1);
 
 // 판정 반경 (§3.3)
-export function radii(attackerStats, power, tiltStacks) {
+// guard = 방어측 딱지 배율(1 = 보정 없음, 작을수록 단단함)
+export function radii(attackerStats, power, tiltStacks, guard = 1) {
   const ps = powerScale(power);
-  const ts = Math.pow(CFG.tilt.factor, tiltStacks);
+  const ts = Math.pow(CFG.tilt.factor, tiltStacks) * guard;
   return {
     bull: (CFG.bull.base + CFG.bull.perStr * attackerStats.str) * ps * ts,
     inner: (CFG.inner.base + CFG.inner.perStr * attackerStats.str) * ps * ts,
@@ -108,13 +109,13 @@ const upgrade = (lv) => (lv === Level.MISS ? Level.INNER : lv === Level.INNER ? 
 
 // 판정 — 설계안 §4 의사코드 그대로.
 // attacker: { stats:{str,luck,...}, hasTape, tapeUsed }  (tape 상태는 여기서 변경)
-// defender: { x, y, tiltStacks }                          (tiltStacks는 여기서 변경)
+// defender: { x, y, tiltStacks, guard? }                  (tiltStacks는 여기서 변경)
 export function judge(aimX, aimY, power, attacker, defender, rng = Math.random) {
   const dx = aimX - defender.x;
   const dy = aimY - defender.y;
   const dist = Math.hypot(dx, dy);
   const tiltBefore = defender.tiltStacks;
-  const { bull, inner } = radii(attacker.stats, power, defender.tiltStacks);
+  const { bull, inner } = radii(attacker.stats, power, defender.tiltStacks, defender.guard ?? 1);
 
   let level;
   let crit = false;

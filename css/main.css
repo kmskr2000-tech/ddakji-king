@@ -1,3 +1,7 @@
 html, body { margin: 0; height: 100%; background: #1d1a2b; overflow: hidden; touch-action: none; }
 body { display: flex; align-items: center; justify-content: center; }
 #game { background: #2b2640; image-rendering: pixelated; touch-action: none; user-select: none; -webkit-user-select: none; }
+
+#boot { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #1d1a2b; color: #ffd447; font-family: 'Jua', 'Do Hyeon', sans-serif; text-align: center; }
+#boot .boot-title { font-size: 34px; letter-spacing: 1px; text-shadow: 0 3px 0 #3a1f12; }
+#boot .boot-sub { font-size: 16px; color: #cfc8e8; opacity: .8; }

@@ -1,0 +1,18 @@
+{
+  "name": "딱지왕 키우기",
+  "short_name": "딱지왕",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1d1a2b",
+  "theme_color": "#2b2640",
+  "description": "추억의 딱지치기로 동네 꼬마에서 전국 딱지왕까지!",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "categories": ["games"]
+}

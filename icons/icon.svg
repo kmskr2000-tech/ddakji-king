@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#4a3a7a"/>
+      <stop offset="1" stop-color="#2b2640"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd447" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffd447" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff0a0"/>
+      <stop offset="0.5" stop-color="#ffc928"/>
+      <stop offset="1" stop-color="#e19a12"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="262" r="210" fill="url(#glow)"/>
+  <!-- ddakji: 270x270 square centered at origin, rotated -8deg -->
+  <g transform="translate(250 270) rotate(-8)" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="-125" y="-125" width="270" height="270" rx="10" fill="#3a1f12" opacity="0.35" transform="translate(10 14)"/>
+    <!-- base paper (cream) -->
+    <rect x="-135" y="-135" width="270" height="270" rx="8" fill="#ffd447" stroke="#3a1f12" stroke-width="10"/>
+    <!-- four red flaps, pinwheel -->
+    <g fill="#d8613c" stroke="#3a1f12" stroke-width="8">
+      <polygon points="-135,-135 0,-135 0,0"/>
+      <polygon points="135,-135 135,0 0,0"/>
+      <polygon points="135,135 0,135 0,0"/>
+      <polygon points="-135,135 -135,0 0,0"/>
+    </g>
+    <!-- fold highlights on flaps -->
+    <g fill="#ffffff" opacity="0.08">
+      <polygon points="-122,-122 -8,-122 -8,-8"/>
+      <polygon points="122,-122 122,-8 8,-8"/>
+      <polygon points="122,122 8,122 8,8"/>
+      <polygon points="-122,122 -122,8 -8,8"/>
+    </g>
+    <!-- cream shading on exposed halves -->
+    <g fill="#c98a1a" opacity="0.3">
+      <polygon points="0,-135 135,-135 0,0"/>
+      <polygon points="135,0 135,135 0,0"/>
+      <polygon points="0,135 -135,135 0,0"/>
+      <polygon points="-135,0 -135,-135 0,0"/>
+    </g>
+    <circle r="12" fill="#ffd447" stroke="#3a1f12" stroke-width="6"/>
+    <rect x="-135" y="-135" width="270" height="270" rx="8" fill="none" stroke="#3a1f12" stroke-width="10"/>
+  </g>
+  <!-- crown -->
+  <g transform="translate(366 112) rotate(12)" stroke="#3a1f12" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M-46,18 L-54,-32 L-26,-10 L0,-46 L26,-10 L54,-32 L46,18 Z" fill="url(#gold)"/>
+    <rect x="-46" y="10" width="92" height="16" rx="4" fill="#e19a12"/>
+    <circle cx="-54" cy="-32" r="7" fill="#ffd447"/>
+    <circle cx="0" cy="-46" r="8" fill="#ffd447"/>
+    <circle cx="54" cy="-32" r="7" fill="#ffd447"/>
+    <circle cx="0" cy="-8" r="6" fill="#d8613c" stroke-width="4"/>
+  </g>
+</svg>

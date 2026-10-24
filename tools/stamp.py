@@ -14,4 +14,7 @@ for f in (root / 'js').glob('*.js'):
     t = f.read_text()
     t = re.sub(r"(from '\./[\w.]+\.js)(\?v=\d+)?'", rf"\1?v={V}'", t)
     f.write_text(t)
+sw = root / 'sw.js'
+if sw.exists():
+    sw.write_text(re.sub(r"const VERSION = '[^']*';", f"const VERSION = '{V}';", sw.read_text(), count=1))
 print('stamped', V)

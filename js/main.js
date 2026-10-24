@@ -1,5 +1,12 @@
-// 코어 프로토타입 렌더: 허수아비 딱지 1개를 계속 타격. (상태머신·화면은 작업 #2)
-import { CFG, Level, Aim, Charge, rollAimParams, effectiveStats, judge, radii, requiredPower } from './aim.js?v=1791365602';
+// 부트스트랩: 캔버스·입력·루프·씬 등록. 게임 규칙은 aim.js / game.js, 화면은 scene-*.js.
+import { App } from './app.js?v=1792844889';
+import { UI, view } from './ui.js?v=1792844889';
+import { Sound } from './audio.js?v=1792844889';
+import { track } from './platform.js?v=1792844889';
+import { registerSW } from './pwa.js?v=1792844889';
+import { BattleScene } from './scene-battle.js';
+import { TitleScene, HomeScene, MapScene, ResultScene } from './scene-menu.js';
+import { UpgradeScene, ShopScene, CollectionScene } from './scene-shop.js';
 
 // 자가업데이트: version.json(no-store) vs window.__V. 다르면 ?v=새버전으로 교체 (같으면 무동작 = 루프 없음)
 if (window.__V) {
@@ -10,150 +17,97 @@ if (window.__V) {
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
-const { W, H, center, ddakjiR } = CFG;
+UI.ctx = ctx;
+UI.sfx = (n) => Sound.play(n);
 
+// 논리 해상도: 가로 420 고정, 세로는 화면비에 맞춰 720~900
 function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  const s = Math.min(innerWidth / W, innerHeight / H);
-  cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px';
-  cv.width = Math.round(W * s * dpr); cv.height = Math.round(H * s * dpr);
-  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
-  ctx.imageSmoothingEnabled = false;
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  view.H = Math.round(Math.min(900, Math.max(720, (innerHeight / Math.max(1, innerWidth)) * view.W)));
+  const s = Math.min(innerWidth / view.W, innerHeight / view.H);
+  cv.style.width = view.W * s + 'px'; cv.style.height = view.H * s + 'px';
+  cv.width = Math.round(view.W * s * dpr); cv.height = Math.round(view.H * s * dpr);
+  view.scale = cv.width / view.W;
+  ctx.setTransform(cv.width / view.W, 0, 0, cv.height / view.H, 0, 0);
 }
 addEventListener('resize', resize); resize();
 
-// 프로토타입 고정 빌드 (URL ?str=4&focus=3&luck=3&item=ironHand 로 변경)
-const q = new URLSearchParams(location.search);
-const base = { str: +(q.get('str') ?? 3), focus: +(q.get('focus') ?? 4), luck: +(q.get('luck') ?? 3) };
-const item = q.get('item') || '';
-const stats = effectiveStats(base, item);
-const attacker = { stats, hasTape: item === 'tape', tapeUsed: false };
-const target = { x: center.x, y: center.y, tiltStacks: 0 };
+App.scenes = { title: TitleScene, home: HomeScene, map: MapScene, battle: BattleScene, result: ResultScene, upgrade: UpgradeScene, shop: ShopScene, collection: CollectionScene };
+App.applySettings();
 
-let aim = new Aim(rollAimParams(stats));
-let charge = new Charge(item === 'ironHand');
-let phase = 'AIM';           // AIM | CHARGE | STRIKE | JUDGE
-let strike = null;           // {x,y,power,t}
-let result = null;           // {level,crit,...,t}
-let flipT = 0;
-const tally = { FLIP: 0, INNER: 0, MISS: 0, WHIFF: 0, crit: 0 };
-const log = (typeof window !== 'undefined') ? (window.__ddakji = { tally, last: null }) : null;
+// 입력: 논리 좌표로 변환 → UI 우선, 나머지는 씬
+const toLocal = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * view.W / r.width, y: (e.clientY - r.top) * view.H / r.height }; };
+let consumed = false, activeId = null;
+cv.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  Sound.unlock();
+  if (activeId !== null) return;            // 멀티터치 무시
+  activeId = e.pointerId;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 무시 */ }
+  const p = toLocal(e);
+  consumed = UI.down(p.x, p.y);
+  if (!consumed && App.fadeDir === 0) App.scene?.down?.(p);
+});
+cv.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== activeId) return;
+  const p = toLocal(e);
+  UI.move(p.x, p.y);
+  if (!consumed) App.scene?.move?.(p);
+});
+const end = (e) => {
+  if (e.pointerId !== activeId) return;
+  activeId = null;
+  const p = toLocal(e);
+  UI.up(p.x, p.y);
+  if (!consumed) App.scene?.up?.(p);
+  consumed = false;
+};
+cv.addEventListener('pointerup', end);
+cv.addEventListener('pointercancel', end);
+cv.addEventListener('wheel', (e) => { e.preventDefault(); App.scene?.wheel?.(e.deltaY * view.H / cv.getBoundingClientRect().height); }, { passive: false });
+cv.addEventListener('contextmenu', (e) => e.preventDefault());
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') e.preventDefault();
+  Sound.unlock();
+  if (App.scene?.key) App.scene.key(e, true);
+  else if (!e.repeat && (e.code === 'Space' || e.code === 'Enter') && App.sceneName === 'title') App.go('home');
+});
+addEventListener('keyup', (e) => App.scene?.key?.(e, false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) { App.scene?.blur?.(); App.persist(); } });
+addEventListener('pagehide', () => App.persist());
 
-function press() { if (phase === 'AIM') { phase = 'CHARGE'; charge.press(); } }
-function release() {
-  if (phase !== 'CHARGE') return;
-  const power = charge.release();
-  strike = { x: aim.x, y: aim.y, power, t: 0 };  // 에임 위치 고정
-  phase = 'STRIKE';
-}
-cv.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
-addEventListener('pointerup', release);
-addEventListener('pointercancel', release);
-addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); press(); } });
-addEventListener('keyup', (e) => { if (e.code === 'Space') release(); });
-
-function nextTurn() {
-  phase = 'AIM'; result = null;
-  aim.charging = false;
-}
-
-function update(dt) {
-  if (phase === 'AIM' || phase === 'CHARGE') {
-    aim.step(dt, phase === 'CHARGE');
-    charge.update(dt);
-  } else if (phase === 'STRIKE') {
-    strike.t += dt;
-    if (strike.t >= 0.4) {
-      const r = judge(strike.x, strike.y, strike.power, attacker, target);
-      result = { ...r, t: 0, power: strike.power };
-      tally[r.level]++; if (r.crit) tally.crit++;
-      if (log) log.last = { ...r, power: strike.power, tilt: target.tiltStacks };
-      phase = 'JUDGE';
-    }
-  } else if (phase === 'JUDGE') {
-    result.t += dt;
-    if (result.level === Level.FLIP) flipT = result.t;
-    if (result.t >= (result.level === Level.FLIP ? 1.5 : 0.8)) {
-      flipT = 0;
-      if (result.level === Level.FLIP) { aim = new Aim(rollAimParams(stats)); }
-      nextTurn();
-    }
-  }
-}
-
-const COLORS = { FLIP: '#ffd447', INNER: '#ff8c42', MISS: '#9aa0b4', WHIFF: '#9aa0b4' };
-const LABEL = { FLIP: '뒤집혔다!', INNER: '이너링! 기울어짐', MISS: '빗나감…', WHIFF: '헛스윙!' };
-
-function ring(r, color, w = 2, dash = []) {
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.setLineDash(dash); ctx.lineWidth = w; ctx.strokeStyle = color; ctx.stroke(); ctx.setLineDash([]);
-}
-
-function draw() {
-  ctx.fillStyle = '#2b2640'; ctx.fillRect(0, 0, W, H);
-
-  // 딱지 (기울어짐 = 회전·찌그러짐)
-  ctx.save();
-  ctx.translate(target.x, target.y);
-  const flipping = phase === 'JUDGE' && result.level === Level.FLIP;
-  const tiltRad = target.tiltStacks * 0.12;
-  ctx.rotate(tiltRad);
-  if (flipping) { const k = Math.min(1, flipT / 0.8); ctx.scale(1, Math.cos(k * Math.PI * 3)); }
-  ctx.fillStyle = flipping && flipT > 0.4 ? '#4aa3ff' : '#d8613c';
-  ctx.beginPath(); ctx.arc(0, 0, ddakjiR, 0, Math.PI * 2); ctx.fill();
-  ring(ddakjiR, '#6b2a16', 4);
-  // 판정 구역 가이드 (프로토타입용: 현재 파워 기준 반경 표시)
-  const pw = phase === 'CHARGE' ? charge.power : 1;
-  const rr = radii(stats, pw, target.tiltStacks);
-  ring(rr.bull, 'rgba(255,255,255,.85)', 2, [4, 3]);
-  ring(rr.inner, 'rgba(255,255,255,.45)', 2, [4, 3]);
-  ctx.restore();
-
-  // 에임 / 착탄점
-  const ax = phase === 'STRIKE' || phase === 'JUDGE' ? strike.x : aim.x;
-  const ay = phase === 'STRIKE' || phase === 'JUDGE' ? strike.y : aim.y;
-  if (phase === 'STRIKE') { // 하단에서 날아오는 딱지
-    const k = strike.t / 0.4, e = 1 - (1 - k) * (1 - k);
-    const fx = center.x + (ax - center.x) * e, fy = 760 + (ay - 760) * e;
-    ctx.fillStyle = '#e9d8a6'; ctx.beginPath(); ctx.arc(fx, fy, 30 - 14 * e, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.strokeStyle = phase === 'CHARGE' ? '#ff5d5d' : '#ffffff'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(ax - 12, ay); ctx.lineTo(ax + 12, ay); ctx.moveTo(ax, ay - 12); ctx.lineTo(ax, ay + 12); ctx.stroke();
-  ctx.beginPath(); ctx.arc(ax, ay, 7, 0, Math.PI * 2); ctx.stroke();
-
-  // 결과
-  ctx.textAlign = 'center';
-  if (result) {
-    ctx.font = 'bold 34px monospace'; ctx.fillStyle = COLORS[result.level];
-    ctx.fillText((result.gated ? '파워 부족! 이너링' : LABEL[result.level]) + (result.crit ? ' ★CRIT' : ''), W / 2, 200);
-    ctx.font = '14px monospace'; ctx.fillStyle = '#ccc';
-    ctx.fillText(`dist ${result.dist.toFixed(1)}  bull ${result.bull.toFixed(1)}  inner ${result.inner.toFixed(1)}  power ${(result.power * 100) | 0}%`, W / 2, 224);
-  }
-
-  // 차지 게이지
-  const gx = 40, gy = 690, gw = W - 80, gh = 26;
-  const req = requiredPower(target.tiltStacks), flipOk = charge.power >= req;
-  ctx.fillStyle = '#14121f'; ctx.fillRect(gx, gy, gw, gh);
-  if (phase === 'CHARGE') { ctx.fillStyle = flipOk ? '#ffd447' : '#ff5d5d'; ctx.fillRect(gx, gy, gw * charge.power, gh); }
-  // 뒤집기 가능 마크: 필요 파워 위치 (상대 기울어짐 스택에 따라 이동)
-  const mx = gx + gw * req;
-  ctx.fillStyle = '#ffd447'; ctx.fillRect(mx - 1.5, gy - 6, 3, gh + 12);
-  ctx.beginPath(); ctx.moveTo(mx, gy + gh + 6); ctx.lineTo(mx - 7, gy + gh + 18); ctx.lineTo(mx + 7, gy + gh + 18); ctx.closePath(); ctx.fill();
-  ctx.textAlign = 'center'; ctx.font = '12px monospace';
-  ctx.fillText(`뒤집기 가능 ${Math.round(req * 100)}%`, Math.min(W - 62, Math.max(62, mx)), gy + gh + 32);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(gx, gy, gw, gh);
-  ctx.font = '16px monospace'; ctx.fillStyle = '#fff';
-  ctx.fillText(phase === 'CHARGE' ? `파워 ${(charge.power * 100) | 0}%` : '누르고 있다가 손을 떼면 발사!', W / 2, gy + 82);
-
-  // HUD
-  ctx.textAlign = 'left'; ctx.font = '13px monospace'; ctx.fillStyle = '#aab';
-  ctx.fillText(`힘${stats.str} 집중${stats.focus} 운${stats.luck} ${item || '-'}  기울어짐 ${target.tiltStacks}`, 12, 22);
-  ctx.fillText(`FLIP ${tally.FLIP}  INNER ${tally.INNER}  MISS ${tally.MISS}  WHIFF ${tally.WHIFF}  crit ${tally.crit}`, 12, 42);
-}
-
+// 루프
 let last = performance.now();
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  update(dt); draw(); requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+  App.t += dt; UI.t = App.t;
+  App.updateFade(dt);
+  App.fx.update(dt);
+  App.scene?.update?.(dt);
+  UI.begin();
+  ctx.save();
+  App.scene?.draw?.(ctx);
+  if (App.scene && !App.scene.ownFx) App.fx.draw(ctx);
+  UI.drawToast(dt);
+  if (App.fade > 0) { ctx.fillStyle = `rgba(16,10,28,${App.fade})`; ctx.fillRect(0, 0, view.W, view.H); }
+  ctx.restore();
+  UI.end();
+  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+
+// 폰트 로드(최대 1.5초 대기) 후 시작 → 부트 화면 제거
+const fontsReady = document.fonts?.load ? Promise.race([Promise.all([document.fonts.load('20px "Jua"'), document.fonts.load('20px "Do Hyeon"')]), new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve();
+fontsReady.catch(() => {}).finally(() => {
+  document.getElementById('boot')?.remove();
+  App.go('title');
+  requestAnimationFrame(frame);
+  track('app_open', { v: window.__V });
+});
+registerSW();
+
+// 테스트·디버그 훅 (smoke-browser.mjs가 사용)
+window.__ddakji = {
+  App, auto: false, battle: () => BattleScene.debug(), go: (n, p) => App.go(n, p),
+  find: (id) => UI.find(id),
+  toClient: (x, y) => { const r = cv.getBoundingClientRect(); return { x: r.left + x * r.width / view.W, y: r.top + y * r.height / view.H }; },
+};
